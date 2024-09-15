@@ -58,9 +58,8 @@ const controller = {
             }
 
             // Generar el token
-            const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-                expiresIn: '1d' // El token expirará en 1 día
-            });
+            const token = jwt.sign({ id: user._id, role: user.role }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '12h' });
+
 
             return res.status(200).json({
                 success: true,

@@ -9,6 +9,11 @@ const orderController = {
         try {
             const { table, products, description, status, waiter } = req.body;
     
+            // Verificar que el usuario tenga el rol de 'waiter'
+            if (req.user.role !== 'waiter') {
+                return res.status(403).json({ message: 'User not authorized' });
+            }
+    
             // Verifica que waiter sea un ObjectId válido
             if (!mongoose.Types.ObjectId.isValid(waiter)) {
                 return res.status(400).json({ message: 'Invalid waiter ID' });
@@ -34,16 +39,22 @@ const orderController = {
             // Crear el pedido
             const order = new Order({ table, products, description, status, waiter });
     
+            // Guardar el pedido en la base de datos
             await order.save();
     
             // Marcar la mesa como ocupada
             tableExists.status = 'occupied';
             await tableExists.save();
     
+            // Popula los detalles completos del pedido (mesa y productos)
+            const populatedOrder = await Order.findById(order._id)
+                .populate('table', 'number') // Solo incluye el número de la mesa
+                .populate('products.product', 'name') // Solo incluye el nombre de los productos
+    
             res.status(201).json({
                 success: true,
                 message: 'Order created successfully',
-                order
+                order: populatedOrder
             });
         } catch (error) {
             next(error);
