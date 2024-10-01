@@ -6,7 +6,6 @@ const tableSchema = new mongoose.Schema({
     status: { type: String, enum: ['available', 'occupied'], default: 'available' }
 });
 
-// Crear el modelo 'User'
 const Table = mongoose.model('Table', tableSchema);
 
 export default Table;
