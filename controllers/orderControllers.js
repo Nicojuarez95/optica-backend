@@ -4,7 +4,6 @@ import Product from '../models/productShema.js';
 import mongoose from 'mongoose';
 
 const orderController = {
-    // Crear un nuevo pedido
     createOrder: async (req, res, next) => {
         try {
             const { table, products, description, status, waiter } = req.body;
