@@ -1,7 +1,7 @@
 import express from 'express';
 import controller from '../controllers/userControllers.js'; // Asegúrate de que la ruta sea correcta
 
-const { register, sign_in, get_all_users } = controller;
+const { register, sign_in } = controller;
 
 const router = express.Router();
 
@@ -9,7 +9,6 @@ const router = express.Router();
 router.post('/register', register);
 // Ruta para iniciar sesión
 router.post('/sign-in', sign_in);
-// Ruta para obtener todos los usuarios
-router.get('/users', get_all_users);
+
 
 export default router;

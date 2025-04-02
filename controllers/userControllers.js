@@ -6,7 +6,7 @@ const controller = {
     // Registro de usuario
     register: async (req, res, next) => {
         try {
-            const { name, password, role } = req.body;
+            const { name, password } = req.body;
 
             // Verificar si el usuario ya existe (en este caso, solo verificamos por nombre)
             const existingUser = await User.findOne({ name });
@@ -21,7 +21,6 @@ const controller = {
             const newUser = await User.create({
                 name,
                 password: hashedPassword,
-                role
             });
 
             return res.status(201).json({
@@ -72,20 +71,6 @@ const controller = {
         }
     },
 
-
-    // Obtener todos los usuarios
-    get_all_users: async (req, res, next) => {
-        try {
-            const users = await User.find().select('-password'); // Excluir la contraseña
-            return res.status(200).json({
-                success: true,
-                message: 'Usuarios obtenidos exitosamente',
-                users
-            });
-        } catch (error) {
-            next(error);
-        }
-    }
 };
 
 export default controller;
