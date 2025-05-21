@@ -1,77 +1,127 @@
 import bcrypt from 'bcryptjs';
-import User from '../models/userSchema.js';
+import User from '../models/userSchema.js'; // Tu modelo de Óptico/User
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h'; // Puedes añadir esto a tu .env
 
 const controller = {
-    // Registro de usuario
+    // Registro de un nuevo óptico
     register: async (req, res, next) => {
         try {
-            const { name, password } = req.body;
+            const { name, email, password } = req.body;
 
-            // Verificar si el usuario ya existe (en este caso, solo verificamos por nombre)
-            const existingUser = await User.findOne({ name });
-            if (existingUser) {
-                return res.status(400).json({ message: 'El usuario ya existe' });
+            // Validaciones básicas
+            if (!name || !email || !password) {
+                return res.status(400).json({ success: false, message: 'Nombre, email y contraseña son obligatorios.' });
+            }
+            if (password.length < 6) {
+                return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres.' });
+            }
+            // Validación de formato de email (básica, el modelo también valida)
+            if (!/.+\@.+\..+/.test(email)) {
+                 return res.status(400).json({ success: false, message: 'Formato de email inválido.' });
             }
 
-            // Encriptar la contraseña
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const existingUser = await User.findOne({ email }); // Verificar por email (que es único)
+            if (existingUser) {
+                return res.status(400).json({ success: false, message: 'Ya existe un usuario con este email.' });
+            }
 
-            // Crear nuevo usuario
+            // El hashing de la contraseña se maneja con el middleware pre-save en userSchema.js
             const newUser = await User.create({
                 name,
-                password: hashedPassword,
+                email,
+                password,
             });
+
+            // Generar token para el nuevo usuario
+            const token = jwt.sign({ id: newUser._id /*, role: newUser.role (si lo implementas) */ }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
             return res.status(201).json({
                 success: true,
-                message: 'Usuario creado exitosamente',
-                user: newUser
+                message: 'Usuario (Óptico) creado exitosamente.',
+                token,
+                user: { // Devolver solo información no sensible
+                    id: newUser._id,
+                    name: newUser.name,
+                    email: newUser.email,
+                }
             });
         } catch (error) {
-            next(error);
+            // console.error("Error en registro:", error);
+            next(error); // Pasa el error al manejador de errores global
         }
     },
 
-    // Inicio de sesión
+    // Inicio de sesión de un óptico
     sign_in: async (req, res, next) => {
         try {
-            const { name, password } = req.body;
+            const { email, password } = req.body; // Cambiado de 'name' a 'email' para el login
 
-            // Buscar el usuario por su nombre
-            const user = await User.findOne({ name });
+            if (!email || !password) {
+                return res.status(400).json({ success: false, message: 'Email y contraseña son obligatorios.' });
+            }
+
+            const user = await User.findOne({ email }); // Buscar por email
             if (!user) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Credenciales incorrectas'
+                    message: 'Credenciales incorrectas.' // Mensaje genérico
                 });
             }
 
-            // Comparar las contraseñas
-            const isMatch = await bcrypt.compare(password, user.password);
+            const isMatch = await user.comparePassword(password); // Usar el método del schema
             if (!isMatch) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Credenciales incorrectas'
+                    message: 'Credenciales incorrectas.' // Mensaje genérico
                 });
             }
 
-            // Generar el token
-            const token = jwt.sign({ id: user._id, role: user.role }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '12h' });
-
+            const token = jwt.sign({ id: user._id /*, role: user.role */ }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 
             return res.status(200).json({
                 success: true,
-                message: 'Usuario autenticado exitosamente',
+                message: 'Usuario autenticado exitosamente.',
                 token,
-                user
+                user: { // Devolver solo información no sensible
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                }
             });
         } catch (error) {
+            // console.error("Error en sign_in:", error);
             next(error);
         }
     },
 
+    // Obtener datos del óptico actualmente autenticado (NUEVO)
+    getMe: async (req, res, next) => {
+        try {
+            // req.user es establecido por el middleware 'authenticate'
+            const currentUser = req.user;
+            
+            if (!currentUser) { // Aunque el middleware ya debería haberlo manejado
+                return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+            }
+
+            res.status(200).json({
+                success: true,
+                user: {
+                    id: currentUser._id,
+                    name: currentUser.name,
+                    email: currentUser.email,
+                }
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 };
 
 export default controller;
-

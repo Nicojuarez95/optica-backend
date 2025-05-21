@@ -1,24 +1,46 @@
+// middlewares/authenticate.js
 import jwt from 'jsonwebtoken';
+import User from '../models/userSchema.js'; // Tu modelo de Óptico/User
+import dotenv from 'dotenv';
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.split(' ')[1];
+dotenv.config();
 
-  if (token == null) {
-    console.log('No token provided');
-    return res.sendStatus(401); // No hay token
-  }
+const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET; // Usando tu variable de entorno
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-    if (err) {
-      console.log('Error verifying token:', err.message);
-      return res.sendStatus(403); // Token inválido o expirado
+const authenticate = async (req, res, next) => {
+    let token;
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            token = authHeader.split(' ')[1]; // Extraer el token "Bearer <token>"
+
+            const decoded = jwt.verify(token, JWT_SECRET);
+
+            // Adjuntar el usuario (óptico) a la solicitud, excluyendo la contraseña
+            req.user = await User.findById(decoded.id).select('-password');
+
+            if (!req.user) {
+                // Si el usuario no se encuentra (ej. fue eliminado después de emitir el token)
+                return res.status(401).json({ success: false, message: 'No autorizado, usuario no encontrado.' });
+            }
+
+            next(); // Pasa al siguiente middleware o controlador
+        } catch (error) {
+            console.error('Error de autenticación en middleware:', error.message);
+            if (error.name === 'JsonWebTokenError') {
+                return res.status(401).json({ success: false, message: 'Token inválido.' });
+            }
+            if (error.name === 'TokenExpiredError') {
+                return res.status(401).json({ success: false, message: 'El token ha expirado.' });
+            }
+            return res.status(401).json({ success: false, message: 'No autorizado.' });
+        }
     }
 
-    console.log('Token is valid:', user);
-    req.user = user;
-    next();
-  });
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'No autorizado, token no proporcionado.' });
+    }
 };
 
-export default authenticateToken;
+export default authenticate;
