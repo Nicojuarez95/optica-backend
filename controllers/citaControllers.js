@@ -61,6 +61,22 @@ const citaController = {
                 hasta.setHours(23, 59, 59, 999);
                 queryFilters.fechaHora = { ...queryFilters.fechaHora, $lte: hasta };
             }
+            if (req.query.fecha) {
+                const fechaSolicitada = req.query.fecha; // Ej: "2025-05-22"
+                // Crear el inicio del día (YYYY-MM-DDT00:00:00.000Z en UTC)
+                const inicioDelDia = new Date(fechaSolicitada);
+                inicioDelDia.setUTCHours(0, 0, 0, 0);
+
+                // Crear el fin del día (YYYY-MM-DDT23:59:59.999Z en UTC)
+                const finDelDia = new Date(fechaSolicitada);
+                finDelDia.setUTCHours(23, 59, 59, 999);
+
+                queryFilters.fechaHora = { // Asumiendo que tu campo de fecha en MongoDB se llama 'fechaHora'
+                    $gte: inicioDelDia, // Mayor o igual que el inicio del día
+                    $lte: finDelDia   // Menor o igual que el fin del día
+                };
+                console.log("BACKEND: Filtro de fecha aplicado:", queryFilters.fechaHora); // <--- AÑADE ESTE LOG EN TU BACKEND
+                }
 
 
             const citas = await Cita.find(queryFilters)
