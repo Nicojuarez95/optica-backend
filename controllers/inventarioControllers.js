@@ -8,9 +8,7 @@ const inventarioController = {
             // Extraer todos los campos relevantes del body
             const { 
                 nombreProducto, tipoProducto, marca, modelo, descripcion, 
-                color, material, curvaBaseLC, diametroLC, poderLC, tipoDuracionLC,
-                tipoMaterialMica, tratamientosMica, volumenSolucion,
-                codigoBarrasUPC, skuInterno, proveedor, costoAdquisicion, 
+                color, material, proveedor, costoAdquisicion, 
                 precioVenta, stockActual, stockMinimoAlerta, ubicacionAlmacen, notasItem 
             } = req.body;
 
@@ -27,21 +25,11 @@ const inventarioController = {
                 descripcion,
                 color, 
                 material, 
-                curvaBaseLC, 
-                diametroLC, 
-                poderLC, 
-                tipoDuracionLC,
-                tipoMaterialMica, 
-                tratamientosMica, 
-                volumenSolucion,
-                codigoBarrasUPC, 
-                skuInterno, 
                 proveedor, 
                 costoAdquisicion,
                 precioVenta, 
                 stockActual, 
-                stockMinimoAlerta, 
-                ubicacionAlmacen, 
+                stockMinimoAlerta,
                 notasItem
             });
 
@@ -70,7 +58,9 @@ const inventarioController = {
             if (req.query.stockMenorA) {
                 queryFilters.stockActual = { $lt: parseInt(req.query.stockMenorA) };
             }
-
+            if (req.query.nombreProducto) {
+                queryFilters.nombreProducto = { $regex: req.query.nombreProducto, $options: 'i' };
+                }
 
             const items = await ItemInventario.find(queryFilters).sort({ nombreProducto: 1 });
 

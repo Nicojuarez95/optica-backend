@@ -18,21 +18,11 @@ const itemInventarioSchema = new mongoose.Schema({
     descripcion: { type: String, trim: true },
     color: { type: String, trim: true },
     material: { type: String, trim: true },
-    curvaBaseLC: { type: String, trim: true }, // Lente de Contacto
-    diametroLC: { type: String, trim: true }, // Lente de Contacto
-    poderLC: { type: String, trim: true }, // Lente de Contacto
-    tipoDuracionLC: { type: String, enum: ['Diario', 'Quincenal', 'Mensual', 'Anual', 'Otro'], trim: true },
-    tipoMaterialMica: { type: String, enum: ['CR-39', 'Policarbonato', 'Trivex', 'Alto Índice', 'Otro'], trim: true },
-    tratamientosMica: [{ type: String, trim: true }],
-    volumenSolucion: { type: String, trim: true },
-    codigoBarrasUPC: { type: String, trim: true, sparse: true }, // sparse: true si es unique y puede ser null
-    skuInterno: { type: String, trim: true },
     proveedor: { type: String, trim: true },
     costoAdquisicion: { type: Number, min: 0 },
     precioVenta: { type: Number, required: [true, 'El precio de venta es obligatorio.'], min: 0 },
     stockActual: { type: Number, required: true, min: 0, default: 0 },
     stockMinimoAlerta: { type: Number, min: 0, default: 1 },
-    ubicacionAlmacen: { type: String, trim: true },
     ultimaActualizacionStock: { type: Date, default: Date.now },
     notasItem: { type: String, trim: true }
 }, { timestamps: true });
