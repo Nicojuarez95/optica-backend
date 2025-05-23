@@ -64,7 +64,5 @@ function onListening() {
     const addr = server.address();
     const bind = typeof addr === 'string' ? 'pipe ' + addr : 'port ' + addr.port;
     console.log(`Servidor escuchando en ${bind}`);
-    console.log(`Entorno: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Accede en: http://localhost:${addr.port}`);
 }
 server.on('listening', onListening);

@@ -75,7 +75,6 @@ const citaController = {
                     $gte: inicioDelDia, // Mayor o igual que el inicio del día
                     $lte: finDelDia   // Menor o igual que el fin del día
                 };
-                console.log("BACKEND: Filtro de fecha aplicado:", queryFilters.fechaHora); // <--- AÑADE ESTE LOG EN TU BACKEND
                 }
 
 

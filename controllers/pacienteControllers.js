@@ -38,9 +38,18 @@ const pacienteController = {
     getMisPacientes: async (req, res, next) => {
         try {
             const opticoId = req.user.id;
-            const pacientes = await Paciente.find({ opticoId }).sort({ nombreCompleto: 1 }); // Ordenar alfabéticamente
-            
-            res.status(200).json({ success: true, count: pacientes.length, pacientes });
+            const queryFilters = { opticoId };
+        
+            const pacientes = await Paciente.find(queryFilters); // Esto dices que funciona
+    
+            // La línea que da el error:
+            const count = await Paciente.countDocuments(queryFilters); 
+           
+            res.status(200).json({
+                success: true,
+                count: count,
+                pacientes: pacientes 
+            });
         } catch (error) {
             next(error);
         }
@@ -71,22 +80,26 @@ const pacienteController = {
         try {
             const opticoId = req.user.id;
             const pacienteId = req.params.id;
+    
+            // Log para ver qué llega para ultimaVisita
+            if (req.body.ultimaVisita) {}
             
             const paciente = await Paciente.findOneAndUpdate(
-                { _id: pacienteId, opticoId }, // Condición de búsqueda
-                req.body, // Datos a actualizar
-                { new: true, runValidators: true } // Opciones: devolver el doc actualizado y correr validaciones
+                { _id: pacienteId, opticoId },
+                req.body,
+                { new: true, runValidators: true }
             );
-
+    
             if (!paciente) {
                 return res.status(404).json({ success: false, message: "Paciente no encontrado o no autorizado para modificar." });
             }
-
+    
             res.status(200).json({ success: true, message: "Paciente actualizado.", paciente });
         } catch (error) {
-             if (error.name === 'ValidationError') {
+            if (error.name === 'ValidationError') {
                 return res.status(400).json({ success: false, message: "Error de validación al actualizar", errors: error.errors });
             }
+            console.error("Error en updatePaciente:", error); // Loguear otros errores
             next(error);
         }
     },
@@ -111,16 +124,11 @@ const pacienteController = {
     
     // --- Historial de Prescripciones ---
     addPrescripcion: async (req, res, next) => {
-    console.log("BACKEND: addPrescripcion - INICIO"); // Log de inicio
-    try {
-        console.log("BACKEND: req.user:", req.user); // Verifica si req.user existe y qué contiene
+        try {
+
         const opticoId = req.user.id; // Esta línea podría fallar si req.user es undefined
-        console.log("BACKEND: opticoId:", opticoId);
-
         const pacienteId = req.params.pacienteId;
-        console.log("BACKEND: pacienteId:", pacienteId);
-        console.log("BACKEND: req.body completo:", req.body); // Muestra todo lo que llega en el body
-
+        
         const { 
             fecha, optometristaResponsable, diagnostico,
             graduacionOD_Esfera, graduacionOD_Cilindro, graduacionOD_Eje,
@@ -130,13 +138,13 @@ const pacienteController = {
             observaciones 
         } = req.body;
 
-        console.log("BACKEND: Buscando paciente...");
+        
         const paciente = await Paciente.findOne({ _id: pacienteId, opticoId });
         if (!paciente) {
-            console.log("BACKEND: Paciente no encontrado o no autorizado.");
+        
             return res.status(404).json({ success: false, message: "Paciente no encontrado o no autorizado." });
         }
-        console.log("BACKEND: Paciente encontrado:", paciente.nombreCompleto);
+        
 
         const subtotalNum = parseFloat(subtotal) || 0;
         const descuentoPorcNum = parseFloat(descuentoPorcentaje) || 0;
@@ -145,8 +153,6 @@ const pacienteController = {
         const montoDescuentoCalc = (subtotalNum * descuentoPorcNum) / 100;
         const totalNetoCalc = subtotalNum - montoDescuentoCalc;
         const saldoPendienteCalc = totalNetoCalc - montoEntregadoNum;
-
-        console.log("BACKEND: Cálculos financieros:", { montoDescuentoCalc, totalNetoCalc, saldoPendienteCalc });
 
         const nuevaPrescripcionData = {
             fecha: fecha ? new Date(fecha) : new Date(),
@@ -171,16 +177,13 @@ const pacienteController = {
             numeroComprobante,
             observaciones
         };
-        console.log("BACKEND: nuevaPrescripcionData lista para añadir:", nuevaPrescripcionData);
 
         paciente.historialPrescripciones.unshift(nuevaPrescripcionData); 
 
         if (!paciente.ultimaVisita || new Date(nuevaPrescripcionData.fecha) > new Date(paciente.ultimaVisita)) {
             paciente.ultimaVisita = nuevaPrescripcionData.fecha;
         }
-        console.log("BACKEND: Intentando guardar paciente...");
         await paciente.save(); 
-        console.log("BACKEND: Paciente guardado exitosamente.");
 
         const prescripcionAgregada = paciente.historialPrescripciones[0];
 

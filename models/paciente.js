@@ -59,7 +59,11 @@ const pacienteSchema = new mongoose.Schema({
     direccion: { type: String, trim: true },
     ocupacion: { type: String, trim: true },
     antecedentesMedicos: { type: String, trim: true },
-    ultimaVisita: { type: Date },
+    ultimaVisita: { 
+        type: String, 
+        trim: true,
+        // match: [/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha para Última Visita debe ser YYYY-MM-DD'] // Opcional
+    },
     historialPrescripciones: [historialPrescripcionSchema], // <--- Usa el schema actualizado
     notasAdicionales: { type: String, trim: true },
 }, { timestamps: true });
