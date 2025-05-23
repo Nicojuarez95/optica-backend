@@ -26,6 +26,7 @@ router.delete('/:id', authenticate, pacienteController.deletePaciente);
 // POST /api/pacientes/:pacienteId/prescripciones -> Añadir una prescripción al historial
 router.post('/:pacienteId/prescripciones', authenticate, pacienteController.addPrescripcion);
 
-// Deberás crear citaRoutes.js e inventarioRoutes.js de forma similar.
+// DELETE /api/pacientes/:pacienteId/prescripciones/:prescripcionId
+router.delete('/:pacienteId/prescripciones/:prescripcionId', authenticate, pacienteController.deletePrescripcion);
 
 export default router;

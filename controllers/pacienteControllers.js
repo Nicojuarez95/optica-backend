@@ -1,4 +1,5 @@
 import Paciente from '../models/paciente.js';
+import mongoose from 'mongoose';
 
 const pacienteController = {
     // Crear un nuevo paciente para el óptico autenticado
@@ -110,44 +111,144 @@ const pacienteController = {
     
     // --- Historial de Prescripciones ---
     addPrescripcion: async (req, res, next) => {
-        try {
-            const opticoId = req.user.id;
-            const pacienteId = req.params.pacienteId; // ID del paciente al que se añade la prescripción
-            const { fecha, optometristaResponsable, diagnostico, graduacionOD, graduacionOI, adicion, dp, observaciones } = req.body;
+    console.log("BACKEND: addPrescripcion - INICIO"); // Log de inicio
+    try {
+        console.log("BACKEND: req.user:", req.user); // Verifica si req.user existe y qué contiene
+        const opticoId = req.user.id; // Esta línea podría fallar si req.user es undefined
+        console.log("BACKEND: opticoId:", opticoId);
 
-            const paciente = await Paciente.findOne({ _id: pacienteId, opticoId });
-            if (!paciente) {
-                return res.status(404).json({ success: false, message: "Paciente no encontrado o no autorizado." });
-            }
+        const pacienteId = req.params.pacienteId;
+        console.log("BACKEND: pacienteId:", pacienteId);
+        console.log("BACKEND: req.body completo:", req.body); // Muestra todo lo que llega en el body
 
-            const nuevaPrescripcion = {
-                fecha: fecha || new Date(),
-                optometristaResponsable: optometristaResponsable || req.user.name, // Por defecto el óptico logueado
-                diagnostico,
-                graduacionOD,
-                graduacionOI,
-                adicion,
-                dp,
-                observaciones
-            };
-            
-            paciente.historialPrescripciones.unshift(nuevaPrescripcion); // Añadir al inicio del array
-            
-            // Actualizar ultimaVisita si esta prescripción es la más reciente
-            if (!paciente.ultimaVisita || new Date(nuevaPrescripcion.fecha) > new Date(paciente.ultimaVisita)) {
-                paciente.ultimaVisita = nuevaPrescripcion.fecha;
-            }
+        const { 
+            fecha, optometristaResponsable, diagnostico,
+            graduacionOD_Esfera, graduacionOD_Cilindro, graduacionOD_Eje,
+            graduacionOI_Esfera, graduacionOI_Cilindro, graduacionOI_Eje,
+            adicion, dp, 
+            descripcionConceptos, subtotal, descuentoPorcentaje, montoEntregado, metodoPagoEntregado, numeroComprobante,
+            observaciones 
+        } = req.body;
 
-            await paciente.save();
-            res.status(201).json({ success: true, message: "Prescripción añadida exitosamente.", paciente });
-
-        } catch (error) {
-            if (error.name === 'ValidationError') {
-                 return res.status(400).json({ success: false, message: "Error de validación al añadir prescripción", errors: error.errors });
-            }
-            next(error);
+        console.log("BACKEND: Buscando paciente...");
+        const paciente = await Paciente.findOne({ _id: pacienteId, opticoId });
+        if (!paciente) {
+            console.log("BACKEND: Paciente no encontrado o no autorizado.");
+            return res.status(404).json({ success: false, message: "Paciente no encontrado o no autorizado." });
         }
-    },
+        console.log("BACKEND: Paciente encontrado:", paciente.nombreCompleto);
+
+        const subtotalNum = parseFloat(subtotal) || 0;
+        const descuentoPorcNum = parseFloat(descuentoPorcentaje) || 0;
+        const montoEntregadoNum = parseFloat(montoEntregado) || 0;
+
+        const montoDescuentoCalc = (subtotalNum * descuentoPorcNum) / 100;
+        const totalNetoCalc = subtotalNum - montoDescuentoCalc;
+        const saldoPendienteCalc = totalNetoCalc - montoEntregadoNum;
+
+        console.log("BACKEND: Cálculos financieros:", { montoDescuentoCalc, totalNetoCalc, saldoPendienteCalc });
+
+        const nuevaPrescripcionData = {
+            fecha: fecha ? new Date(fecha) : new Date(),
+            optometristaResponsable: optometristaResponsable || (req.user ? (req.user.nombre || req.user.name) : 'N/A'),
+            diagnostico,
+            graduacionOD_Esfera: graduacionOD_Esfera || "",
+            graduacionOD_Cilindro: graduacionOD_Cilindro || "",
+            graduacionOD_Eje: graduacionOD_Eje || "",
+            graduacionOI_Esfera: graduacionOI_Esfera || "",
+            graduacionOI_Cilindro: graduacionOI_Cilindro || "",
+            graduacionOI_Eje: graduacionOI_Eje || "",
+            adicion: adicion || "",
+            dp: dp || "",
+            descripcionConceptos,
+            subtotal: subtotalNum,
+            descuentoPorcentaje: descuentoPorcNum,
+            montoDescuento: montoDescuentoCalc,
+            totalNeto: totalNetoCalc,
+            montoEntregado: montoEntregadoNum,
+            saldoPendiente: saldoPendienteCalc,
+            metodoPagoEntregado,
+            numeroComprobante,
+            observaciones
+        };
+        console.log("BACKEND: nuevaPrescripcionData lista para añadir:", nuevaPrescripcionData);
+
+        paciente.historialPrescripciones.unshift(nuevaPrescripcionData); 
+
+        if (!paciente.ultimaVisita || new Date(nuevaPrescripcionData.fecha) > new Date(paciente.ultimaVisita)) {
+            paciente.ultimaVisita = nuevaPrescripcionData.fecha;
+        }
+        console.log("BACKEND: Intentando guardar paciente...");
+        await paciente.save(); 
+        console.log("BACKEND: Paciente guardado exitosamente.");
+
+        const prescripcionAgregada = paciente.historialPrescripciones[0];
+
+        res.status(201).json({ 
+            success: true, 
+            message: "Prescripción añadida exitosamente.", 
+            paciente,
+            prescripcion: prescripcionAgregada 
+        });
+
+    } catch (error) {
+        console.error("BACKEND: Error detallado en addPrescripcion:", error); 
+        if (error.name === 'ValidationError') {
+            const errors = {};
+            for (const field in error.errors) {
+                errors[field] = error.errors[field].message;
+            }
+            return res.status(400).json({ success: false, message: "Error de validación al añadir prescripción", errors });
+        }
+        res.status(500).json({ success: false, message: "Error interno del servidor al añadir la prescripción." });
+    }
+},
+deletePrescripcion : async (req, res, next) => {
+    try {
+        const opticoId = req.user.id; // ID del óptico logueado
+        const { pacienteId, prescripcionId } = req.params;
+
+        // Validar que los IDs sean ObjectIds válidos de MongoDB
+        if (!mongoose.Types.ObjectId.isValid(pacienteId) || !mongoose.Types.ObjectId.isValid(prescripcionId)) {
+            return res.status(400).json({ success: false, message: "ID de paciente o prescripción inválido." });
+        }
+
+        const paciente = await Paciente.findOne({ _id: pacienteId, opticoId });
+
+        if (!paciente) {
+            return res.status(404).json({ success: false, message: "Paciente no encontrado o no pertenece a este óptico." });
+        }
+
+        // Encontrar la prescripción y eliminarla del array
+        // El método pull de Mongoose es ideal para esto
+        const resultadoUpdate = await Paciente.updateOne(
+            { _id: pacienteId, opticoId },
+            { $pull: { historialPrescripciones: { _id: prescripcionId } } }
+        );
+
+        if (resultadoUpdate.modifiedCount === 0) {
+            // Si no se modificó nada, puede ser que la prescripción no existiera con ese ID en ese paciente
+            return res.status(404).json({ success: false, message: "Prescripción no encontrada en este paciente." });
+        }
+
+        // Opcional: Volver a obtener el paciente actualizado para devolverlo si es necesario,
+        // o simplemente confirmar la eliminación.
+        // const pacienteActualizado = await Paciente.findById(pacienteId);
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Prescripción eliminada exitosamente.",
+            pacienteId: pacienteId, // Para identificar al paciente en el frontend
+            prescripcionId: prescripcionId // Para identificar la prescripción eliminada en el frontend
+        });
+
+    } catch (error) {
+        console.error("Error en deletePrescripcion:", error);
+        next(error);
+    }
+},
+
+
     // Aquí podrías añadir métodos para editar o eliminar una prescripción específica si es necesario
 };
 
