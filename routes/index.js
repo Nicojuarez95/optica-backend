@@ -3,6 +3,7 @@ import UserRouter from './userRouter.js'; // Tus rutas de autenticación
 import pacienteRoutes from './pacienteRouter.js';
 import citaRoutes from './citaRouter.js'; // <--- NUEVO
 import inventarioRoutes from './inventarioRouter.js'; // <--- NUEVO
+// import cajaRoutes from './cajaRoutes.js'; 
 
 const router = express.Router();
 
@@ -17,6 +18,8 @@ router.use('/citas', citaRoutes); // <--- NUEVO
 
 // Rutas para la gestión de inventario (prefijo /inventario)
 router.use('/inventario', inventarioRoutes); // <--- NUEVO
+
+// router.use('/caja', cajaRoutes);
 
 // Ruta raíz de la API para verificar que funciona
 router.get('/', (req, res) => {
