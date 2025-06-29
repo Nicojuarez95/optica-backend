@@ -124,6 +124,10 @@ const pacienteController = {
     
     // --- Historial de Prescripciones ---
     addPrescripcion: async (req, res, next) => {
+        console.log("🧾 Datos recibidos en req.body:", req.body);
+        console.log("👤 Usuario autenticado:", req.user);
+        console.log("🆔 ID del paciente:", req.params.pacienteId);
+
     try {
         const opticoId = req.user.id;
         const pacienteId = req.params.pacienteId;
