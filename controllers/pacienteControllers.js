@@ -144,7 +144,16 @@ const pacienteController = {
         
             return res.status(404).json({ success: false, message: "Paciente no encontrado o no autorizado." });
         }
-        
+        if (!numeroComprobante || !numeroComprobante.toString().trim()) {
+                    return res.status(400).json({
+                        success: false,
+                        errors: {
+                            numeroComprobante: {
+                                message: "El número de comprobante es obligatorio."
+                            }
+                        }
+                    });
+                        }
 
         const subtotalNum = parseFloat(subtotal) || 0;
         const descuentoPorcNum = parseFloat(descuentoPorcentaje) || 0;
@@ -174,7 +183,7 @@ const pacienteController = {
             montoEntregado: montoEntregadoNum,
             saldoPendiente: saldoPendienteCalc,
             metodoPagoEntregado,
-            numeroComprobante,
+            numeroComprobante: numeroComprobante.toString().trim(),
             observaciones
         };
 
