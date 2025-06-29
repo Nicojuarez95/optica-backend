@@ -27,7 +27,7 @@ const historialPrescripcionSchema = new mongoose.Schema({
     montoEntregado: { type: Number, default: 0 },
     saldoPendiente: { type: Number, default: 0 },      // Campo real para almacenar el cálculo
     metodoPagoEntregado: { type: String, trim: true, default: "Efectivo" },
-    numeroComprobante: { type: String, unique: true, sparse: true, trim: true },
+    numeroComprobante: { type: String, sparse: true, trim: true },
 
     observaciones: { type: String, trim: true, default: "" } // Solo una definición
 }, { _id: true, timestamps: true });

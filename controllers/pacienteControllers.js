@@ -124,37 +124,56 @@ const pacienteController = {
     
     // --- Historial de Prescripciones ---
     addPrescripcion: async (req, res, next) => {
-        try {
-
-        const opticoId = req.user.id; // Esta línea podría fallar si req.user es undefined
+    try {
+        const opticoId = req.user.id;
         const pacienteId = req.params.pacienteId;
-        
-        const { 
+
+        const {
             fecha, optometristaResponsable, diagnostico,
             graduacionOD_Esfera, graduacionOD_Cilindro, graduacionOD_Eje,
             graduacionOI_Esfera, graduacionOI_Cilindro, graduacionOI_Eje,
-            adicion, dp, 
+            adicion, dp,
             descripcionConceptos, subtotal, descuentoPorcentaje, montoEntregado, metodoPagoEntregado, numeroComprobante,
-            observaciones 
+            observaciones
         } = req.body;
 
-        
         const paciente = await Paciente.findOne({ _id: pacienteId, opticoId });
         if (!paciente) {
-        
             return res.status(404).json({ success: false, message: "Paciente no encontrado o no autorizado." });
         }
-        if (!numeroComprobante || !numeroComprobante.toString().trim()) {
-                    return res.status(400).json({
-                        success: false,
-                        errors: {
-                            numeroComprobante: {
-                                message: "El número de comprobante es obligatorio."
-                            }
-                        }
-                    });
-                        }
 
+        // Validación de campo obligatorio
+        if (!numeroComprobante || !numeroComprobante.toString().trim()) {
+            return res.status(400).json({
+                success: false,
+                errors: {
+                    numeroComprobante: {
+                        message: "El número de comprobante es obligatorio."
+                    }
+                }
+            });
+        }
+
+        const comprobanteIngresado = numeroComprobante.toString().trim().toLowerCase();
+
+        // Validar si ya existe en este paciente
+        const yaExiste = paciente.historialPrescripciones.some(p =>
+            p.numeroComprobante &&
+            p.numeroComprobante.toString().trim().toLowerCase() === comprobanteIngresado
+        );
+
+        if (yaExiste) {
+            return res.status(400).json({
+                success: false,
+                errors: {
+                    numeroComprobante: {
+                        message: "Este número de comprobante ya fue utilizado para este paciente."
+                    }
+                }
+            });
+        }
+
+        // Cálculos financieros
         const subtotalNum = parseFloat(subtotal) || 0;
         const descuentoPorcNum = parseFloat(descuentoPorcentaje) || 0;
         const montoEntregadoNum = parseFloat(montoEntregado) || 0;
@@ -165,7 +184,7 @@ const pacienteController = {
 
         const nuevaPrescripcionData = {
             fecha: fecha ? new Date(fecha) : new Date(),
-            optometristaResponsable: optometristaResponsable || (req.user ? (req.user.nombre || req.user.name) : 'N/A'),
+            optometristaResponsable: optometristaResponsable || (req.user?.nombre || req.user?.name || 'N/A'),
             diagnostico,
             graduacionOD_Esfera: graduacionOD_Esfera || "",
             graduacionOD_Cilindro: graduacionOD_Cilindro || "",
@@ -183,28 +202,29 @@ const pacienteController = {
             montoEntregado: montoEntregadoNum,
             saldoPendiente: saldoPendienteCalc,
             metodoPagoEntregado,
-            numeroComprobante: numeroComprobante.toString().trim(),
+            numeroComprobante: comprobanteIngresado,
             observaciones
         };
 
-        paciente.historialPrescripciones.unshift(nuevaPrescripcionData); 
+        paciente.historialPrescripciones.unshift(nuevaPrescripcionData);
 
         if (!paciente.ultimaVisita || new Date(nuevaPrescripcionData.fecha) > new Date(paciente.ultimaVisita)) {
             paciente.ultimaVisita = nuevaPrescripcionData.fecha;
         }
-        await paciente.save(); 
+
+        await paciente.save();
 
         const prescripcionAgregada = paciente.historialPrescripciones[0];
 
-        res.status(201).json({ 
-            success: true, 
-            message: "Prescripción añadida exitosamente.", 
+        res.status(201).json({
+            success: true,
+            message: "Prescripción añadida exitosamente.",
             paciente,
-            prescripcion: prescripcionAgregada 
+            prescripcion: prescripcionAgregada
         });
 
     } catch (error) {
-        console.error("BACKEND: Error detallado en addPrescripcion:", error); 
+        console.error("BACKEND: Error detallado en addPrescripcion:", error);
         if (error.name === 'ValidationError') {
             const errors = {};
             for (const field in error.errors) {
@@ -215,6 +235,7 @@ const pacienteController = {
         res.status(500).json({ success: false, message: "Error interno del servidor al añadir la prescripción." });
     }
 },
+
 deletePrescripcion : async (req, res, next) => {
     try {
         const opticoId = req.user.id; // ID del óptico logueado
