@@ -124,12 +124,10 @@ const pacienteController = {
     
     // --- Historial de Prescripciones ---
     addPrescripcion: async (req, res, next) => {
-        
-
     try {
         const opticoId = req.user.id;
         const pacienteId = req.params.pacienteId;
-        
+
         console.log("🧾 Datos recibidos en req.body:", req.body);
         console.log("👤 Usuario autenticado:", req.user);
         console.log("🆔 ID del paciente:", req.params.pacienteId);
@@ -169,6 +167,7 @@ const pacienteController = {
         );
 
         if (yaExiste) {
+            console.log("Duplicado encontrado para numeroComprobante:", comprobanteIngresado);
             return res.status(400).json({
                 success: false,
                 errors: {
@@ -178,6 +177,7 @@ const pacienteController = {
                 }
             });
         }
+
 
         // Cálculos financieros
         const subtotalNum = parseFloat(subtotal) || 0;
@@ -231,6 +231,8 @@ const pacienteController = {
 
     } catch (error) {
         console.error("BACKEND: Error detallado en addPrescripcion:", error);
+        console.error(error.stack);
+
         if (error.name === 'ValidationError') {
             const errors = {};
             for (const field in error.errors) {

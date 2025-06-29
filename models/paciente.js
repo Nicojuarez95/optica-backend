@@ -32,19 +32,9 @@ const historialPrescripcionSchema = new mongoose.Schema({
     observaciones: { type: String, trim: true, default: "" } // Solo una definición
 }, { _id: true, timestamps: true });
 
-// Los virtuals pueden seguir siendo útiles si quieres una forma de calcularlos
-// si por alguna razón no se guardaron, pero el controlador se encargará de guardarlos.
-// Si los guardas, los virtuals para estos campos específicos ya no son estrictamente necesarios
-// para la recuperación, pero no hacen daño.
 historialPrescripcionSchema.virtual('montoDescuentoCalculado').get(function() {
     return (this.subtotal && this.descuentoPorcentaje) ? (this.subtotal * this.descuentoPorcentaje) / 100 : 0;
 });
-// ... y así para los otros si quieres mantenerlos como una forma de "re-cálculo" o getter.
-
-// Asegúrate de que los virtuals se incluyan si los necesitas en la respuesta JSON/objeto
-// historialPrescripcionSchema.set('toJSON', { virtuals: true });
-// historialPrescripcionSchema.set('toObject', { virtuals: true });
-// Sin embargo, si los guardas como campos reales, esto es menos crítico para estos campos específicos.
 
 const pacienteSchema = new mongoose.Schema({
     opticoId: {
